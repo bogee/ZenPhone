@@ -16,6 +16,9 @@ local.properties
 # Generated files and artifacts
 /captures/
 /screenshots/
+*.jks
+*.keystore
+app/keystore.properties
 
 # Log dumps pulled off a device while debugging
 /logcat.txt

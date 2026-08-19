@@ -11,7 +11,6 @@ import android.provider.ContactsContract
 import android.telephony.PhoneNumberUtils
 import android.util.Log
 
-import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 
@@ -221,7 +220,6 @@ class ContactsDataSource(
     /**
      * Resolves the best available phone number for the contact identified by [lookupKey].
      */
-    @RequiresPermission(Manifest.permission.READ_CONTACTS)
     suspend fun resolvePhoneNumber(lookupKey: String): String? =
         withContext(Dispatchers.IO) {
             if (!hasContactsPermission()) return@withContext null

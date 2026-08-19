@@ -27,6 +27,39 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def releaseKeystorePath = System.getenv('ZENPHONE_RELEASE_KEYSTORE')
+def releaseStorePassword = System.getenv('ZENPHONE_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('ZENPHONE_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('ZENPHONE_RELEASE_KEY_PASSWORD')
+def releaseEnvironmentValues = [
+        releaseKeystorePath,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword
+]
+def environmentSigningConfigured = releaseEnvironmentValues.every {
+    it != null && !it.trim().isEmpty()
+}
+
+if (!environmentSigningConfigured && releaseEnvironmentValues.any { it != null && !it.trim().isEmpty() }) {
+    throw new GradleException('All ZenPhone release-signing environment variables must be provided together.')
+}
+
+def propertySigningValues = [
+        keystoreProperties['storePassword'],
+        keystoreProperties['keyAlias'],
+        keystoreProperties['keyPassword']
+]
+def propertySigningConfigured = keystorePropertiesFile.exists() && propertySigningValues.every {
+    it != null && !it.toString().trim().isEmpty()
+}
+
+if (keystorePropertiesFile.exists() && !propertySigningConfigured) {
+    throw new GradleException('app/keystore.properties must define storePassword, keyAlias, and keyPassword.')
+}
+
+def releaseSigningConfigured = environmentSigningConfigured || propertySigningConfigured
+
 def getDate() {
     return new Date().format('MMddHHmm')
 }
@@ -38,8 +71,8 @@ android {
         applicationId = "net.zenolabs.zenphone"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders = [fullApp: "true", recentCalls: "true"]
     }
@@ -51,18 +84,20 @@ android {
 
     signingConfigs {
         release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file('release-key.jks')
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
+            if (releaseSigningConfigured) {
+                storeFile = environmentSigningConfigured ? file(releaseKeystorePath) : file('release-key.jks')
+                storePassword = environmentSigningConfigured ? releaseStorePassword : keystoreProperties['storePassword']
+                keyAlias = environmentSigningConfigured ? releaseKeyAlias : keystoreProperties['keyAlias']
+                keyPassword = environmentSigningConfigured ? releaseKeyPassword : keystoreProperties['keyPassword']
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.release
+            }
             debuggable false
             minifyEnabled true
             shrinkResources = true

@@ -52,7 +52,13 @@ the runtime bundled with Android Studio, under `<install dir>\jbr`, works fine.
 
 ## Installation
 
-No releases yet. Distribution will target F-Droid and direct APK downloads.
+This fork publishes permanently signed APKs on its
+[GitHub Releases page](https://github.com/bogee/ZenPhone/releases). To receive future updates
+through [Obtainium](https://github.com/ImranR98/Obtainium), add this repository URL:
+
+```text
+https://github.com/bogee/ZenPhone
+```
 
 Note that Google Play policies restrict apps requesting several system-level permissions at
 once (call log, contacts, media). Publishing there would require splitting the app or dropping
