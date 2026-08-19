@@ -4,6 +4,23 @@ All notable changes to ZenPhone are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-08-19
+
+### Added
+
+- Permanently signed APK releases with certificate and SHA-256 checksum assets for direct
+  installation and Obtainium updates from the `bogee/ZenPhone` fork.
+
+### Fixed
+
+- Crash recovery now creates an immutable `PendingIntent`, as required when targeting Android
+  12 and newer.
+- The Wi-Fi status button now uses an API 23-compatible callback on Android 6.
+- Contact phone-number resolution no longer advertises a permission precondition that it
+  already handles safely at runtime.
+- The Bulgarian alarm-created message now has the same name placeholder as the other
+  translations.
+
 ## [1.1.0] - 2026-07-30
 
 The home screen stops being a fixed drawing and becomes something that can be arranged. Which
@@ -71,5 +88,6 @@ First release of ZenPhone, continuing from
 [BaldPhone](https://github.com/UriahShaulMandel/BaldPhone) by Uriah Shaul Mandel and
 [BaldPhone Neo](https://github.com/DamianKuzmiak/BaldPhoneNeo) by Damian Kuzmiak.
 
+[1.1.1]: https://github.com/bogee/ZenPhone/releases/tag/v1.1.1
 [1.1.0]: https://github.com/zenolabs/ZenPhone/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/zenolabs/ZenPhone/releases/tag/v1.0.0

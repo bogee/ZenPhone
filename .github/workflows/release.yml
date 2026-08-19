@@ -1,0 +1,110 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'bogee/ZenPhone'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Android API 37
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Make the Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ZENPHONE_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/zenphone-release.jks"
+          chmod 600 "$RUNNER_TEMP/zenphone-release.jks"
+
+      - name: Build signed release APK
+        env:
+          ZENPHONE_RELEASE_KEYSTORE: ${{ runner.temp }}/zenphone-release.jks
+          ZENPHONE_RELEASE_STORE_PASSWORD: ${{ secrets.ZENPHONE_RELEASE_STORE_PASSWORD }}
+          ZENPHONE_RELEASE_KEY_ALIAS: zenphone
+          ZENPHONE_RELEASE_KEY_PASSWORD: ${{ secrets.ZENPHONE_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease --stacktrace
+
+      - name: Verify and package release
+        id: package
+        env:
+          ZENPHONE_RELEASE_KEYSTORE: ${{ runner.temp }}/zenphone-release.jks
+          ZENPHONE_RELEASE_STORE_PASSWORD: ${{ secrets.ZENPHONE_RELEASE_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          input_apk="app/build/outputs/apk/release/app-release.apk"
+          test -f "$input_apk"
+
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          package_line="$($aapt dump badging "$input_apk" | head -n 1)"
+          package_name="$(sed -n "s/.*package: name='\([^']*\)'.*/\1/p" <<< "$package_line")"
+          version_name="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$package_line")"
+
+          test "$package_name" = "net.zenolabs.zenphone"
+          test "$GITHUB_REF_NAME" = "v$version_name"
+          "$apksigner" verify --verbose --print-certs "$input_apk"
+
+          mkdir -p release
+          output_apk="release/ZenPhone-$GITHUB_REF_NAME.apk"
+          certificate="release/ZenPhone-signing-certificate.pem"
+          checksum="$output_apk.sha256"
+          cp "$input_apk" "$output_apk"
+          keytool -exportcert -rfc \
+            -keystore "$ZENPHONE_RELEASE_KEYSTORE" \
+            -storepass:env ZENPHONE_RELEASE_STORE_PASSWORD \
+            -alias zenphone \
+            -file "$certificate"
+          sha256sum "$output_apk" > "$checksum"
+
+          echo "apk=$output_apk" >> "$GITHUB_OUTPUT"
+          echo "certificate=$certificate" >> "$GITHUB_OUTPUT"
+          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_APK: ${{ steps.package.outputs.apk }}
+          RELEASE_CERTIFICATE: ${{ steps.package.outputs.certificate }}
+          RELEASE_CHECKSUM: ${{ steps.package.outputs.checksum }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "$RELEASE_APK" \
+            "$RELEASE_CERTIFICATE" \
+            "$RELEASE_CHECKSUM" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "ZenPhone ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --verify-tag

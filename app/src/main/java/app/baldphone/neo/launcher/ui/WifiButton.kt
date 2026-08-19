@@ -20,7 +20,9 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.util.AttributeSet
 
 import androidx.appcompat.widget.AppCompatImageButton
@@ -73,8 +75,18 @@ class WifiButton
 
         override fun onAttachedToWindow() {
             super.onAttachedToWindow()
-            context.getSystemService<ConnectivityManager>()
-                ?.registerDefaultNetworkCallback(networkCallback)
+            context.getSystemService<ConnectivityManager>()?.let { connectivityManager ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    connectivityManager.registerDefaultNetworkCallback(networkCallback)
+                } else {
+                    val wifiRequest =
+                        NetworkRequest
+                            .Builder()
+                            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                            .build()
+                    connectivityManager.registerNetworkCallback(wifiRequest, networkCallback)
+                }
+            }
             refresh()
         }
 

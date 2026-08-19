@@ -156,7 +156,7 @@
     <string name="morning">Сутрин</string>
     <string name="name">Име</string>
     <string name="named__">на име</string>
-    <string name="new_alarm___was_created">Беше създадена нова аларма!</string>
+    <string name="new_alarm___was_created">Беше създадена нова аларма %s!</string>
     <string name="nfc">NFC</string>
     <string name="no">Не</string>
     <string name="notes">Бележки</string>
